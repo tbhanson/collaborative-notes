@@ -8,6 +8,7 @@
          web-server/http
          web-server/http/xexpr
          web-server/dispatch
+         koyo/session
          "components/db.rkt"
          "components/session.rkt"
          "controllers/entries.rkt"
@@ -106,10 +107,12 @@
    [("logout") #:method "POST" (auth-controller-handle-logout auth-ctrl)]))
 
 ;; Wrap the dispatcher so unmatched routes get a clean 404.
-(define (app* req)
-  (if (app req)
-      (app req)
-      (response-404 req)))
+(define app*
+  ((wrap-session session-manager)
+   (lambda (req)
+     (if (app req)
+         (app req)
+         (response-404 req)))))
 
 ;; ---- Start server ----------------------------------------------------------
 

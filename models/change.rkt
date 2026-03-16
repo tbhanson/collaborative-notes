@@ -3,7 +3,8 @@
 ;;; models/change.rkt
 ;;; Read-only access to the entry_changes audit trail.
 
-(require racket/contract
+(require db
+         racket/contract
          racket/match
          "../components/db.rkt")
 

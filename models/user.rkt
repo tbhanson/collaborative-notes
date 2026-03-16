@@ -2,7 +2,8 @@
 
 ;;; models/user.rkt
 
-(require racket/contract
+(require db
+         racket/contract
          racket/match
          "../components/db.rkt")
 

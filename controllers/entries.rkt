@@ -9,6 +9,7 @@
          racket/string
          net/url                        ; for url-query
          web-server/http
+         web-server/http/bindings
          web-server/http/xexpr
          "../components/db.rkt"
          "../components/session.rkt"
@@ -19,7 +20,14 @@
          "../views/entries/show.rkt"
          "../views/entries/form.rkt")
 
-(provide make-entries-controller)
+(provide make-entries-controller
+         entries-controller-index
+         entries-controller-show
+         entries-controller-new-form
+         entries-controller-create
+         entries-controller-edit-form
+         entries-controller-update
+         entries-controller-delete)
 
 ;; Returns a struct of handler functions closed over the db and session components.
 (struct entries-controller
@@ -30,8 +38,7 @@
 
   ;; Helper: resolve the current user from the session, or #f.
   (define (current-user req)
-    (define sess (session-manager-load! session-manager req))
-    (define uid  (session-user-id sess))
+    (define uid (session-user-id session-manager))
     (and uid (get-user-by-id dbc uid)))
 
   ;; Helper: require login.
@@ -46,9 +53,9 @@
 
   ;; Helper: extract a form field from a POST request.
   (define (form-field req name)
-    (define b (request-bindings req))
-    (define v (bindings-assq (string->bytes/utf-8 name) b))
-    (and v (bytes->string/utf-8 (binding:form-value v))))
+    (define bindings (request-bindings req))
+    (define pair (assq (string->symbol name) bindings))
+    (and pair (cdr pair)))
 
   ;; Helper: parse ?sort= query parameter.
   (define (parse-sort req)

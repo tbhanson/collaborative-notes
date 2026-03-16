@@ -4,7 +4,8 @@
 ;;; CRUD for glossary entries.  Every mutating operation also writes
 ;;; a row to entry_changes so the full audit trail is always current.
 
-(require racket/contract
+(require db
+         racket/contract
          racket/list
          racket/match
          racket/string
@@ -65,14 +66,14 @@
                    [(date)  "ORDER BY created_at DESC"]))
   (map row->entry
        (query-rows* dbc
-         (string-append
-           "SELECT id, title, body, phonetic, created_by, created_at
+                    (string-append
+                     "SELECT id, title, body, phonetic, created_by, created_at
             FROM entries "
-           where " " order ";"))))
+                     where " " order ";"))))
 
 (define (get-entry dbc id)
   (define row (query-maybe-row* dbc
-    "SELECT id, title, body, phonetic, created_by, created_at
+                                "SELECT id, title, body, phonetic, created_by, created_at
      FROM entries WHERE id = ?;" id))
   (and row (row->entry row)))
 
@@ -80,12 +81,12 @@
 
 (define (create-entry! dbc #:title title #:body body #:phonetic phonetic #:user-id uid)
   (query-exec* dbc
-    "INSERT INTO entries (title, body, phonetic, created_by)
+               "INSERT INTO entries (title, body, phonetic, created_by)
      VALUES (?, ?, ?, ?);"
-    title
-    (or body    sql-null)
-    (or phonetic sql-null)
-    uid)
+               title
+               (or body    sql-null)
+               (or phonetic sql-null)
+               uid)
   (define new-id
     (vector-ref (query-row* dbc "SELECT last_insert_rowid();") 0))
   ;; Record creation in audit trail.
@@ -108,27 +109,27 @@
   (maybe-record! "phonetic" (entry-phonetic old) phonetic)
   ;; Perform the actual update.
   (query-exec* dbc
-    "UPDATE entries SET title = ?, body = ?, phonetic = ? WHERE id = ?;"
-    title
-    (or body     sql-null)
-    (or phonetic sql-null)
-    id)
+               "UPDATE entries SET title = ?, body = ?, phonetic = ? WHERE id = ?;"
+               title
+               (or body     sql-null)
+               (or phonetic sql-null)
+               id)
   (void))
 
 (define (delete-entry! dbc #:id id #:user-id uid)
   (record-change! dbc id uid "deleted_at" #f "deleted")
   (query-exec* dbc
-    "UPDATE entries SET deleted_at = datetime('now') WHERE id = ?;" id)
+               "UPDATE entries SET deleted_at = datetime('now') WHERE id = ?;" id)
   (void))
 
 ;; ---- Internal: audit trail write -------------------------------------------
 
 (define (record-change! dbc entry-id user-id field old-value new-value)
   (query-exec* dbc
-    "INSERT INTO entry_changes (entry_id, changed_by, field, old_value, new_value)
+               "INSERT INTO entry_changes (entry_id, changed_by, field, old_value, new_value)
      VALUES (?, ?, ?, ?, ?);"
-    entry-id
-    user-id
-    field
-    (or old-value sql-null)
-    (or new-value sql-null)))
+               entry-id
+               user-id
+               field
+               (or old-value sql-null)
+               (or new-value sql-null)))
