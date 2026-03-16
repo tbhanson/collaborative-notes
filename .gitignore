@@ -1,7 +1,23 @@
-.DS_Store
+# Racket compiled files
 compiled/
-/doc/
+
 *~
 *.bak
 \#*
 .\#*
+/doc/
+
+*.zo
+*.dep
+
+# SQLite database (dev)
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets / env
+*.env
+!*.env.template
+
+# macOS
+.DS_Store

@@ -1,0 +1,32 @@
+# deploy/family-glossary.service
+#
+# Install on the server:
+#   sudo cp family-glossary.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now family-glossary
+#
+# Logs:
+#   journalctl -u family-glossary -f
+
+[Unit]
+Description=Family Glossary web app
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/family-glossary
+
+# Set these in /etc/family-glossary.env — never commit secrets to git.
+EnvironmentFile=/etc/family-glossary.env
+
+ExecStart=/usr/bin/racket /opt/family-glossary/main.rkt
+Restart=on-failure
+RestartSec=5s
+
+# Basic hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

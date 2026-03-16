@@ -1,0 +1,28 @@
+# deploy/Caddyfile
+#
+# Replace glossary.example.com with your actual domain.
+# Caddy fetches and renews a Let's Encrypt certificate automatically.
+#
+# Install: https://caddyserver.com/docs/install
+# Copy to: /etc/caddy/Caddyfile
+# Reload:  sudo systemctl reload caddy
+
+glossary.example.com {
+    reverse_proxy localhost:8080
+
+    # Compress responses
+    encode gzip
+
+    # Basic security headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Log to journald-compatible format
+    log {
+        output stderr
+        format console
+    }
+}
