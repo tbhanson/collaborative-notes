@@ -99,5 +99,5 @@
 
 ;; ---- Run all ---------------------------------------------------------------
 
-(run-tests user-tests)
-(run-tests entry-tests)
+(run-test user-tests)
+(run-test entry-tests)

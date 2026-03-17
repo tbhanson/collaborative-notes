@@ -15,6 +15,11 @@ compiled/
 *.db-shm
 *.db-wal
 
+# in memory databases
+:memory:
+:memory:-shm
+:memory:-wal
+
 # Secrets / env
 *.env
 !*.env.template

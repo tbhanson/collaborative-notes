@@ -31,12 +31,13 @@
 ;; ---- Constructor -----------------------------------------------------------
 
 (define (make-db-component db-path)
-  ;; Accept the symbol 'memory for in-memory test databases.
+  (define memory? (eq? db-path 'memory))
   (define conn
     (sqlite3-connect
-     #:database (if (eq? db-path 'memory) ":memory:" db-path)
+     #:database (if memory? ":memory:" db-path)
      #:mode 'create))
-  (query-exec conn "PRAGMA journal_mode=WAL;")
+  (unless memory?
+    (query-exec conn "PRAGMA journal_mode=WAL;"))
   (query-exec conn "PRAGMA foreign_keys=ON;")
   (run-migrations! conn)
   (db-component conn))
@@ -48,7 +49,7 @@
 
 (define (run-migrations! conn)
   (query-exec conn
-    "CREATE TABLE IF NOT EXISTS schema_migrations (
+              "CREATE TABLE IF NOT EXISTS schema_migrations (
        filename TEXT PRIMARY KEY,
        applied_at TEXT NOT NULL DEFAULT (datetime('now'))
      );")
@@ -63,8 +64,8 @@
     (define already-applied?
       (not (null?
             (query-rows conn
-              "SELECT 1 FROM schema_migrations WHERE filename = ?;"
-              fname))))
+                        "SELECT 1 FROM schema_migrations WHERE filename = ?;"
+                        fname))))
     (unless already-applied?
       (define sql (strip-inline-comments (file->string f)))
       (for ([stmt (string-split sql ";")])
@@ -72,8 +73,8 @@
         (unless (string=? trimmed "")
           (query-exec conn trimmed)))
       (query-exec conn
-        "INSERT INTO schema_migrations (filename) VALUES (?);"
-        fname)
+                  "INSERT INTO schema_migrations (filename) VALUES (?);"
+                  fname)
       (printf "Migration applied: ~a~n" fname))))
 
 ;; ---- Query helpers ---------------------------------------------------------
