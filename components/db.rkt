@@ -11,7 +11,8 @@
          racket/file
          racket/path
          racket/runtime-path
-         racket/string)
+         racket/string
+         racket/list)
 
 (provide (contract-out
           [make-db-component    (-> (or/c path-string? symbol?) db-component?)]
@@ -42,6 +43,9 @@
 
 ;; ---- Migration runner ------------------------------------------------------
 
+(define (strip-inline-comments sql)
+  (regexp-replace* #rx"--[^\n]*" sql ""))
+
 (define (run-migrations! conn)
   (query-exec conn
     "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -62,7 +66,8 @@
               "SELECT 1 FROM schema_migrations WHERE filename = ?;"
               fname))))
     (unless already-applied?
-      (for ([stmt (string-split (file->string f) ";")])
+      (define sql (strip-inline-comments (file->string f)))
+      (for ([stmt (string-split sql ";")])
         (define trimmed (string-trim stmt))
         (unless (string=? trimmed "")
           (query-exec conn trimmed)))

@@ -3,7 +3,8 @@
 ;;; main.rkt
 ;;; Entry point.  Assembles components, defines routing, starts the server.
 
-(require web-server/servlet
+(require net/url
+         web-server/servlet
          web-server/servlet-env
          web-server/http
          web-server/http/xexpr
@@ -41,7 +42,7 @@
 ;; to signal PUT (update) and DELETE, which the router checks below.
 
 (define (method-override req)
-  (if (equal? (request-method req) #"POST")
+  (if (equal? (request-method req) #"post")
       (let* ([b (request-bindings req)]
              [v (bindings-assq #"_method" b)])
         (if v
@@ -68,51 +69,56 @@
 
 ;; ---- Router ----------------------------------------------------------------
 
-(define-values (app _)
-  (dispatch-rules+applies
+(define-values (app _ )
+  (dispatch-rules
    ;; Home
-   [("")                             #:method "GET"
-    (entries-controller-index entries-ctrl)]
+
+   [("")                               #:method "get"
+                                     (entries-controller-index entries-ctrl)]
 
    ;; New entry form — must come before /:id to avoid "new" being parsed as integer
-   [("entries" "new")                #:method "GET"
-    (entries-controller-new-form entries-ctrl)]
+   [("entries" "new")                #:method "get"
+                                     (entries-controller-new-form entries-ctrl)]
 
    ;; Create entry
-   [("entries")                      #:method "POST"
-    (entries-controller-create entries-ctrl)]
+   [("entries")                      #:method "post"
+                                     (entries-controller-create entries-ctrl)]
 
    ;; Show entry
-   [("entries" (integer-arg))        #:method "GET"
-    (lambda (req id) ((entries-controller-show entries-ctrl) req id))]
+   [("entries" (integer-arg))        #:method "get"
+                                     (lambda (req id) ((entries-controller-show entries-ctrl) req id))]
 
    ;; Edit form
-   [("entries" (integer-arg) "edit") #:method "GET"
-    (lambda (req id) ((entries-controller-edit-form entries-ctrl) req id))]
+   [("entries" (integer-arg) "edit") #:method "get"
+                                     (lambda (req id) ((entries-controller-edit-form entries-ctrl) req id))]
 
    ;; Update / delete via POST + _method override
-   [("entries" (integer-arg))        #:method "POST"
-    (lambda (req id)
-      (case (method-override req)
-        [(PUT)  ((entries-controller-update entries-ctrl) req id)]
-        [else   ((entries-controller-delete entries-ctrl) req id)]))]
+   [("entries" (integer-arg))        #:method "post"
+                                     (lambda (req id)
+                                       (case (method-override req)
+                                         [(PUT)  ((entries-controller-update entries-ctrl) req id)]
+                                         [else   ((entries-controller-delete entries-ctrl) req id)]))]
 
    ;; Explicit delete route (used by the form's action attribute)
-   [("entries" (integer-arg) "delete") #:method "POST"
-    (lambda (req id) ((entries-controller-delete entries-ctrl) req id))]
+   [("entries" (integer-arg) "delete") #:method "post"
+                                       (lambda (req id) ((entries-controller-delete entries-ctrl) req id))]
 
    ;; Auth
-   [("login")  #:method "GET"  (auth-controller-show-login   auth-ctrl)]
-   [("login")  #:method "POST" (auth-controller-handle-login  auth-ctrl)]
-   [("logout") #:method "POST" (auth-controller-handle-logout auth-ctrl)]))
+   [("login")  #:method "get"  (auth-controller-show-login   auth-ctrl)]
+   [("login")  #:method "post" (auth-controller-handle-login  auth-ctrl)]
+   [("logout") #:method "post" (auth-controller-handle-logout auth-ctrl)]
+
+   [else (lambda (req) (response-404 req))]))
 
 ;; Wrap the dispatcher so unmatched routes get a clean 404.
 (define app*
   ((wrap-session session-manager)
    (lambda (req)
-     (if (app req)
-         (app req)
-         (response-404 req)))))
+     (printf "PATH: ~s METHOD: ~s~n"
+             (map path/param-path (url-path (request-uri req)))
+             (request-method req))
+         (app req))))
+
 
 ;; ---- Start server ----------------------------------------------------------
 
