@@ -30,9 +30,9 @@
 
   ;; Extract a named field from a POST form body.
   (define (form-field req name)
-    (define b (request-bindings req))
-    (define v (bindings-assq (string->bytes/utf-8 name) b))
-    (and v (bytes->string/utf-8 (binding:form-value v))))
+    (define bindings (request-bindings req))
+    (define pair (assq (string->symbol name) bindings))
+    (and pair (cdr pair)))
 
   ;; GET /login — just show the form
   (define (handle-show-login req)

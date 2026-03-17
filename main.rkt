@@ -42,15 +42,11 @@
 ;; to signal PUT (update) and DELETE, which the router checks below.
 
 (define (method-override req)
-  (if (equal? (request-method req) #"post")
-      (let* ([b (request-bindings req)]
-             [v (bindings-assq #"_method" b)])
-        (if v
-            (string->symbol
-             (string-upcase (bytes->string/utf-8 (binding:form-value v))))
-            'POST))
-      (string->symbol
-       (string-upcase (bytes->string/utf-8 (request-method req))))))
+  (define b (request-bindings req))
+  (define v (assq '_method b))
+  (if v
+      (string->symbol (string-upcase (cdr v)))
+      'POST))
 
 ;; ---- 404 / 405 responses ---------------------------------------------------
 
