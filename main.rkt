@@ -57,12 +57,6 @@
           (body (h1 "404 — Not Found")
                 (p (a ([href "/"]) "Back to glossary"))))))
 
-(define (response-405 req)
-  (response/xexpr
-   #:code 405
-   `(html (head (title "Method Not Allowed"))
-          (body (h1 "405 — Method Not Allowed")))))
-
 ;; ---- Router ----------------------------------------------------------------
 
 (define-values (app _ )
@@ -104,7 +98,7 @@
    [("login")  #:method "post" (auth-controller-handle-login  auth-ctrl)]
    [("logout") #:method "post" (auth-controller-handle-logout auth-ctrl)]
 
-   [else (lambda (req) (response-404 req))]))
+   [else response-404]))
 
 ;; Wrap the dispatcher so unmatched routes get a clean 404.
 (define app*
