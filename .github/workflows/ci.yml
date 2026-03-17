@@ -27,8 +27,6 @@ jobs:
         run: |
           raco pkg install --auto --batch \
             koyo-lib \
-            db-lib \
-            sqlite-native \
             gregor-lib \
             threading-lib
 
@@ -45,7 +43,8 @@ jobs:
             echo "No tests yet — skipping."
           fi
 
-  deploy:
+deploy:
+    if: false  # re-enable when Hetzner is set up
     # Only deploy from main, and only if CI passes.
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
