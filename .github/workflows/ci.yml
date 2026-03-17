@@ -43,29 +43,3 @@ jobs:
             echo "No tests yet — skipping."
           fi
 
-deploy:
-    if: false  # re-enable when Hetzner is set up
-    # Only deploy from main, and only if CI passes.
-    needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Deploy to server
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}   # e.g. 1.2.3.4
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}   # e.g. deploy
-          DEPLOY_KEY:  ${{ secrets.DEPLOY_KEY }}    # SSH private key
-        run: |
-          # Write the SSH key
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-          # Copy files and restart
-          ssh -i ~/.ssh/deploy_key \
-              -o StrictHostKeyChecking=no \
-              "$DEPLOY_USER@$DEPLOY_HOST" \
-              'bash /opt/family-glossary/deploy/deploy.sh'
