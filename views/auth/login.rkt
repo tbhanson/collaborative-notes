@@ -21,6 +21,12 @@
          (div ([class "form-group"])
            (label ([for "name"]) "Your name")
            (input ([type "text"] [id "name"] [name "name"]
-                   [placeholder "e.g. tim"] [required "required"])))
+                   [placeholder "e.g. tim"] [required "required"]
+                   [autocomplete "username"])))
+         (div ([class "form-group"])
+           (label ([for "password"]) "Password")
+           (input ([type "password"] [id "password"] [name "password"]
+                   [required "required"]
+                   [autocomplete "current-password"])))
          (div ([class "form-actions"])
            (button ([type "submit"] [class "btn btn-primary"]) "Log In")))))))

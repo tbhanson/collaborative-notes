@@ -26,12 +26,14 @@
       (nav
        (a ([href "/"]) (strong "Family Glossary"))
        (span ([class "nav-links"])
-         (a ([href "/"]) "Entries")
-         ,@(if current-user-name
-               `((span ([class "user-name"]) "👤 " ,current-user-name)
-                 (a ([href "/logout"]) "Log out"))
-               `((a ([href "/login"]) "Log in"))))))
+             (a ([href "/"]) "Entries")
+             ,@(if current-user-name
+                   `((span ([class "user-name"]) "👤 " ,current-user-name)
+                     (form ([method "post"] [action "/logout"] [class "inline-form"])
+                           (button ([type "submit"] [class "btn-link"]) "Log out")))
+                   `((a ([href "/login"]) "Log in"))))))
      (main
       ,@body-xexprs)
      (footer
       (p "Family Glossary")))))
+

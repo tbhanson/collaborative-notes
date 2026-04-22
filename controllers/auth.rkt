@@ -1,15 +1,7 @@
 #lang racket/base
 
 ;;; controllers/auth.rkt
-;;; Login/logout handlers.
-;;;
-;;; Session access works like this:
-;;;   - wrap-session middleware (applied in main.rkt) runs before every
-;;;     request and sets current-session-id as a parameter
-;;;   - session-set-user-id! and session-clear! in components/session.rkt
-;;;     call session-manager-set!/remove! which use current-session-id
-;;;     internally — so we just pass the session-manager and the value,
-;;;     no need to "load" the session manually
+;;; Login/logout handlers with password verification.
 
 (require web-server/http
          web-server/http/bindings
@@ -28,31 +20,30 @@
 
 (define (make-auth-controller dbc session-manager)
 
-  ;; Extract a named field from a POST form body.
   (define (form-field req name)
     (define bindings (request-bindings req))
     (define pair (assq (string->symbol name) bindings))
     (and pair (cdr pair)))
 
-  ;; GET /login — just show the form
+  ;; GET /login
   (define (handle-show-login req)
     (response/xexpr (login-view #f)))
 
-  ;; POST /login — look up the name, set session if found
+  ;; POST /login — verify name + password
   (define (handle-login req)
-    (define name (form-field req "name"))
-    (define user (and name (get-user-by-name dbc name)))
+    (define name     (form-field req "name"))
+    (define password (form-field req "password"))
+    (define user
+      (and name password
+           (check-password dbc name password)))
     (if user
         (begin
-          ;; Store the user's id in the session.
-          ;; wrap-session has already set current-session-id for this
-          ;; request, so session-set-user-id! knows which session to write.
           (session-set-user-id! session-manager (user-id user))
           (redirect-to "/"))
         (response/xexpr
-         (login-view "Name not recognised. Ask a family admin to add you."))))
+         (login-view "Invalid name or password."))))
 
-  ;; POST /logout — clear the user id from the session
+  ;; POST /logout
   (define (handle-logout req)
     (session-clear! session-manager)
     (redirect-to "/"))
