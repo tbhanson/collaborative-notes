@@ -64,31 +64,36 @@
     (define p (assoc "sort" pairs))
     (if (and p (equal? (cdr p) "date")) 'date 'alpha))
 
+
+
+  
   ;; ---- GET / ----------------------------------------------------------------
   (define (handle-index req)
-    (define sort-param (parse-sort req))
-    (define entries (list-entries dbc #:sort sort-param #:include-deleted? #f))
-    (define users (list-users dbc))
-    (define user-names
-      (for/hash ([u users])
-        (values (user-id u) (user-display u))))
-    (define me (current-user req))
-    (response/xexpr
-     (entries-index-view entries sort-param user-names (and me (user-display me)))))
+    (with-login req
+      (lambda (me)
+        (define sort-param (parse-sort req))
+        (define entries (list-entries dbc #:sort sort-param #:include-deleted? #f))
+        (define users (list-users dbc))
+        (define user-names
+          (for/hash ([u users])
+            (values (user-id u) (user-display u))))
+        (response/xexpr
+         (entries-index-view entries sort-param user-names (user-display me))))))
   
   ;; ---- GET /entries/:id -----------------------------------------------------
   (define (handle-show req id)
-    (define e (get-entry dbc id))
-    (if (not e)
-        (response-404)
-        (let* ([creator (get-user-by-id dbc (entry-created-by e))]
-               [changes (list-changes-for-entry dbc id)]
-               [me      (current-user req)])
-          (response/xexpr
-           (entry-show-view e
-                            (if creator (user-display creator) "unknown")
-                            changes
-                            (and me (user-display me)))))))
+    (with-login req
+      (lambda (me)
+        (define e (get-entry dbc id))
+        (if (not e)
+            (response-404)
+            (let* ([creator (get-user-by-id dbc (entry-created-by e))]
+                   [changes (list-changes-for-entry dbc id)])
+              (response/xexpr
+               (entry-show-view e
+                                (if creator (user-display creator) "unknown")
+                                changes
+                                (user-display me))))))))
 
   ;; ---- GET /entries/new -----------------------------------------------------
   (define (handle-new req)
