@@ -13,10 +13,11 @@
           [entries-index-view
            (-> (listof entry?)          ; entries to display
                (or/c 'alpha 'date)      ; current sort
+               hash?
                (or/c string? #f)        ; logged-in display name
                list?)]))                ; xexpr
 
-(define (entries-index-view entries sort-by current-user)
+(define (entries-index-view entries sort-by user-names current-user)
   (layout
    "Entries"
    current-user
@@ -36,7 +37,9 @@
              (thead
               (tr (th "Title") (th "Phonetic") (th "Added by") (th "Date") (th "")))
              (tbody
-              ,@(map entry-row entries)))))))
+              ,@(map
+                 (lambda (e)
+                   (entry-row user-names e)) entries)))))))
 
 (define (sort-link label key current)
   (define active? (string=? key (symbol->string current)))
@@ -44,12 +47,12 @@
        [class ,(if active? "sort-link active" "sort-link")])
      ,label))
 
-(define (entry-row e)
+(define (entry-row user-names e)
   `(tr
     (td (a ([href ,(string-append "/entries/" (number->string (entry-id e)))]) 
             ,(entry-title e)))
     (td ,(or (entry-phonetic e) ""))
-    (td ,(number->string (entry-created-by e)))   ; replaced with display name in controller
-    (td ,(entry-created-at e))
+    (td ,(hash-ref user-names (entry-created-by e) "unknown")) ; replaced with display name in controller
+    (td ,(substring (entry-created-at e) 0 10))
     (td (a ([href ,(string-append "/entries/" (number->string (entry-id e)) "/edit")])
             "edit"))))

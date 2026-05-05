@@ -68,10 +68,14 @@
   (define (handle-index req)
     (define sort-param (parse-sort req))
     (define entries (list-entries dbc #:sort sort-param #:include-deleted? #f))
+    (define users (list-users dbc))
+    (define user-names
+      (for/hash ([u users])
+        (values (user-id u) (user-display u))))
     (define me (current-user req))
     (response/xexpr
-     (entries-index-view entries sort-param (and me (user-display me)))))
-
+     (entries-index-view entries sort-param user-names (and me (user-display me)))))
+  
   ;; ---- GET /entries/:id -----------------------------------------------------
   (define (handle-show req id)
     (define e (get-entry dbc id))
