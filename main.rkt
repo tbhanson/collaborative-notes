@@ -13,7 +13,10 @@
          "components/db.rkt"
          "components/session.rkt"
          "controllers/entries.rkt"
-         "controllers/auth.rkt")
+         "controllers/auth.rkt"
+         "controllers/account.rkt"
+         )
+
 
 ;; ---- Configuration ---------------------------------------------------------
 
@@ -35,6 +38,8 @@
 (define session-manager (make-session-component (string->bytes/utf-8 session-secret)))
 (define entries-ctrl    (make-entries-controller dbc session-manager))
 (define auth-ctrl       (make-auth-controller    dbc session-manager))
+(define account-ctrl    (make-account-controller dbc session-manager))
+
 
 ;; ---- Method override -------------------------------------------------------
 ;;
@@ -64,7 +69,7 @@
    ;; Home
 
    [("")                               #:method "get"
-                                     (entries-controller-index entries-ctrl)]
+                                       (entries-controller-index entries-ctrl)]
 
    ;; New entry form — must come before /:id to avoid "new" being parsed as integer
    [("entries" "new")                #:method "get"
@@ -98,6 +103,11 @@
    [("login")  #:method "post" (auth-controller-handle-login  auth-ctrl)]
    [("logout") #:method "post" (auth-controller-handle-logout auth-ctrl)]
 
+   [("account" "password") #:method "get"
+                           (account-controller-show-change-password account-ctrl)]
+   [("account" "password") #:method "post"
+                           (account-controller-handle-change-password account-ctrl)]
+
    [else response-404]))
 
 ;; Wrap the dispatcher so unmatched routes get a clean 404.
@@ -107,7 +117,7 @@
      (printf "PATH: ~s METHOD: ~s~n"
              (map path/param-path (url-path (request-uri req)))
              (request-method req))
-         (app req))))
+     (app req))))
 
 
 ;; ---- Start server ----------------------------------------------------------
