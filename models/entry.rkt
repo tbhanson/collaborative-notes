@@ -63,7 +63,8 @@
   (define where  (if include-deleted? "" "WHERE deleted_at IS NULL"))
   (define order  (case sort-by
                    [(alpha) "ORDER BY lower(title) ASC"]
-                   [(date)  "ORDER BY created_at DESC"]))
+                   [(date)  "ORDER BY created_at ASC, lower(title) ASC"]
+                   ))
   (map row->entry
        (query-rows* dbc
                     (string-append

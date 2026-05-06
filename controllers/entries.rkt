@@ -65,7 +65,7 @@
 
   (define (parse-sort req)
     (define pairs (url-query (request-uri req)))
-    (define p (assoc "sort" pairs))
+    (define p (assoc 'sort pairs))
     (if (and p (equal? (cdr p) "date")) 'date 'alpha))
 
   ;; ---- GET / ---------------------------------------------------------------
