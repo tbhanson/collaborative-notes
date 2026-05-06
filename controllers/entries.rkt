@@ -2,12 +2,11 @@
 
 ;;; controllers/entries.rkt
 ;;; HTTP handlers for listing, viewing, creating, editing, and deleting entries.
-;;; Each handler takes a request and returns a response.
 
 (require racket/contract
          racket/match
          racket/string
-         net/url                        ; for url-query
+         net/url
          web-server/http
          web-server/http/bindings
          web-server/http/xexpr
@@ -29,45 +28,47 @@
          entries-controller-update
          entries-controller-delete)
 
-;; Returns a struct of handler functions closed over the db and session components.
 (struct entries-controller
   (index show new-form create edit-form update delete)
   #:transparent)
 
 (define (make-entries-controller dbc session-manager)
 
-  ;; Helper: resolve the current user from the session, or #f.
   (define (current-user req)
     (define uid (session-user-id session-manager))
     (and uid (get-user-by-id dbc uid)))
 
-  ;; Helper: require login.
-  ;; Returns the user struct if logged in, or raises a redirect response
-  ;; as a value. Callers must check with (when (response? me) (return me)).
-  ;; We use a continuation escape to make the early-return pattern clean.
+  ;; Require login — redirect to /login if not authenticated.
   (define (with-login req handler)
     (define me (current-user req))
     (if me
         (handler me)
         (redirect-to "/login")))
 
-  ;; Helper: extract a form field from a POST request.
+  ;; Require editor role — return 403 if viewer.
+  (define (with-editor req handler)
+    (with-login req
+      (lambda (me)
+        (if (user-editor? me)
+            (handler me)
+            (response/xexpr
+             #:code 403
+             `(html (head (title "Forbidden"))
+                    (body (h1 "403 — Forbidden")
+                          (p "You don't have permission to do that.")
+                          (p (a ([href "/"]) "Back to glossary")))))))))
+
   (define (form-field req name)
     (define bindings (request-bindings req))
     (define pair (assq (string->symbol name) bindings))
     (and pair (cdr pair)))
 
-  ;; Helper: parse ?sort= query parameter.
   (define (parse-sort req)
     (define pairs (url-query (request-uri req)))
-    ;; url-query returns (listof (cons string (or/c string #f)))
     (define p (assoc "sort" pairs))
     (if (and p (equal? (cdr p) "date")) 'date 'alpha))
 
-
-
-  
-  ;; ---- GET / ----------------------------------------------------------------
+  ;; ---- GET / ---------------------------------------------------------------
   (define (handle-index req)
     (with-login req
       (lambda (me)
@@ -78,9 +79,11 @@
           (for/hash ([u users])
             (values (user-id u) (user-display u))))
         (response/xexpr
-         (entries-index-view entries sort-param user-names (user-display me))))))
-  
-  ;; ---- GET /entries/:id -----------------------------------------------------
+         (entries-index-view entries sort-param user-names
+                             (user-display me)
+                             (user-editor? me))))))
+
+  ;; ---- GET /entries/:id ----------------------------------------------------
   (define (handle-show req id)
     (with-login req
       (lambda (me)
@@ -93,17 +96,18 @@
                (entry-show-view e
                                 (if creator (user-display creator) "unknown")
                                 changes
-                                (user-display me))))))))
+                                (user-display me)
+                                (user-editor? me))))))))
 
-  ;; ---- GET /entries/new -----------------------------------------------------
+  ;; ---- GET /entries/new ----------------------------------------------------
   (define (handle-new req)
-    (with-login req
+    (with-editor req
       (lambda (me)
         (response/xexpr (entry-form-view #f #f (user-display me))))))
 
-  ;; ---- POST /entries --------------------------------------------------------
+  ;; ---- POST /entries -------------------------------------------------------
   (define (handle-create req)
-    (with-login req
+    (with-editor req
       (lambda (me)
         (define title    (form-field req "title"))
         (define phonetic (form-field req "phonetic"))
@@ -113,23 +117,23 @@
              (entry-form-view #f "Title is required." (user-display me)))
             (let ([new-id (create-entry! dbc
                                          #:title    (string-trim title)
-                                         #:body     (non-empty body)      ; fixed arg order
+                                         #:body     (non-empty body)
                                          #:phonetic (non-empty phonetic)
                                          #:user-id  (user-id me))])
               (redirect-to (string-append "/entries/" (number->string new-id))))))))
 
-  ;; ---- GET /entries/:id/edit ------------------------------------------------
+  ;; ---- GET /entries/:id/edit -----------------------------------------------
   (define (handle-edit req id)
-    (with-login req
+    (with-editor req
       (lambda (me)
         (define e (get-entry dbc id))
         (if (not e)
             (response-404)
             (response/xexpr (entry-form-view e #f (user-display me)))))))
 
-  ;; ---- POST /entries/:id (with _method=PUT) ---------------------------------
+  ;; ---- POST /entries/:id ---------------------------------------------------
   (define (handle-update req id)
-    (with-login req
+    (with-editor req
       (lambda (me)
         (define title    (form-field req "title"))
         (define phonetic (form-field req "phonetic"))
@@ -147,9 +151,9 @@
                              #:user-id  (user-id me))
               (redirect-to (string-append "/entries/" (number->string id))))))))
 
-  ;; ---- POST /entries/:id/delete ---------------------------------------------
+  ;; ---- POST /entries/:id/delete --------------------------------------------
   (define (handle-delete req id)
-    (with-login req
+    (with-editor req
       (lambda (me)
         (delete-entry! dbc #:id id #:user-id (user-id me))
         (redirect-to "/"))))
@@ -164,17 +168,14 @@
 
 ;; ---- Helpers ---------------------------------------------------------------
 
-;; Returns #f if s is blank/empty, else the trimmed string.
 (define (non-empty s)
   (and s
        (let ([t (string-trim s)])
          (and (not (string=? t "")) t))))
 
-;; A minimal 404 response.
 (define (response-404)
   (response/xexpr
    #:code 404
    `(html (head (title "Not Found"))
           (body (h1 "404 Not Found")
-                (p "That entry doesn't exist.")
                 (p (a ([href "/"]) "Back to glossary"))))))

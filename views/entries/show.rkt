@@ -16,9 +16,10 @@
                string?                  ; creator display name
                (listof change?)
                (or/c string? #f)        ; current user display name
+               boolean?                 ; is current user an editor?
                list?)]))
 
-(define (entry-show-view e creator-name changes current-user)
+(define (entry-show-view e creator-name changes current-user editor?)
   (layout
    (entry-title e)
    current-user
@@ -33,8 +34,8 @@
                  (p ,(entry-body e))))
              '())
        (footer ([class "entry-meta"])
-         (span "Added by " ,creator-name " on " ,(entry-created-at e))
-         ,@(if current-user
+         (span "Added by " ,creator-name " on " ,(substring (entry-created-at e) 0 10))
+         ,@(if editor?
                `((span " · "
                    (a ([href ,(string-append "/entries/"
                                              (number->string (entry-id e))
@@ -66,7 +67,7 @@
 
 (define (change-row c)
   `(tr
-    (td ,(change-changed-at c))
+    (td ,(substring (change-changed-at c) 0 10))
     (td ,(change-display-name c))
     (td ,(change-field c))
     (td ([class "old-value"]) ,(or (change-old-value c) "—"))
