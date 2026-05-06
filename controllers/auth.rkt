@@ -40,8 +40,10 @@
         (begin
           (session-set-user-id! session-manager (user-id user))
           (redirect-to "/"))
-        (response/xexpr
-         (login-view "Invalid name or password."))))
+        (begin
+          (sleep 2)
+          (response/xexpr
+           (login-view "Invalid name or password.")))))
 
   ;; POST /logout
   (define (handle-logout req)
